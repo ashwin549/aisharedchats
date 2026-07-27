@@ -31,23 +31,21 @@ jobs:
 
       - name: Run export + upload to Firebase
         id: export
+        continue-on-error: true
         env:
           FIREBASE_SERVICE_ACCOUNT_KEY: /tmp/firebase-key.json
         run: |
           python claude_sharedchats.py links.txt --firebase-upload chats -o exports
-          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          rc=$?
+          echo "exit_code=$rc" >> "$GITHUB_OUTPUT"
 
       - name: Report export result
         if: always()
         run: |
-          echo "Export exit code: ${{ steps.export.outputs.exit_code || 'unknown' }}"
-          if [ "${{ steps.export.outputs.exit_code }}" != "0" ]; then
-            echo "⚠️ Export completed with errors (some links may have failed)"
-          else
-            echo "✅ Export completed successfully"
-          fi
+          echo "Export exit code: ${{ steps.export.outputs.exit_code }}"
 
       - name: Commit updated links & manifest
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
