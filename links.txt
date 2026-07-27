@@ -1,7 +1,3 @@
-# Paste Claude share links here, one per line
-# Example:
-# https://claude.ai/share/abc12345-...
-# abc12345-...
 https://claude.ai/share/33dd4a49-be99-4c56-872f-09ea030376ed
 https://claude.ai/share/805ee3e5-eb74-43b6-8036-03615b303f6d
 https://claude.ai/share/b76ffb8c-8a9d-43fb-b02d-0990e2e2fc7c

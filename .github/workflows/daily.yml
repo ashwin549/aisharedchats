@@ -13,42 +13,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
+      - run: |
           pip install curl_cffi firebase-admin ddgs
-
-      - name: Write Firebase service account to temp file
-        run: |
+      - run: |
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}' > /tmp/firebase-key.json
-
-      - name: Discover new Claude share links from search
-        run: |
-          python discover_links.py --max 50
-
-      - name: Run export + upload to Firebase
-        id: export
+      - run: python discover_links.py --max 50
+      - id: export
         continue-on-error: true
         env:
           FIREBASE_SERVICE_ACCOUNT_KEY: /tmp/firebase-key.json
         run: |
           python claude_sharedchats.py links.txt --firebase-upload chats -o exports
-          rc=$?
-          echo "exit_code=$rc" >> "$GITHUB_OUTPUT"
-
-      - name: Report export result
-        if: always()
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+      - if: always()
         run: |
           echo "Export exit code: ${{ steps.export.outputs.exit_code }}"
-
-      - name: Commit and push
-        if: always()
+      - if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

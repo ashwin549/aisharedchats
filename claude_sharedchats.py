@@ -1,27 +1,5 @@
 #!/usr/bin/env python3
-"""Export claude.ai share links to markdown transcripts.
-
-Usage:
-    claude_share_export.py <url-or-uuid> [...] [-o OUTDIR]
-    claude_share_export.py links.txt [-o OUTDIR]
-    claude_share_export.py -f links.txt [-o OUTDIR]
-
-A links file is newline-delimited; blank lines and #-comments are ignored.
-
-Re-running the same links file is cheap: a manifest records what has already
-been exported, and known conversations are skipped before any network
-request. Use --force to re-fetch them.
-
-The manifest survives tidying up: it is looked for in the output directory
-and then just above it, and a recorded transcript that has been moved into a
-subdirectory is still recognised (and its new location recorded) rather than
-being downloaded a second time.
-
-The share page itself is an empty SPA shell, so this reads the underlying
-JSON API instead. That endpoint sits behind a Cloudflare check that
-fingerprints TLS rather than headers, which is why this uses curl_cffi
-(browser TLS impersonation) instead of plain requests.
-"""
+"""Export claude.ai share links to markdown transcripts."""
 
 from __future__ import annotations
 
@@ -36,32 +14,16 @@ from pathlib import Path
 
 try:
     from curl_cffi import requests as cffi_requests
-except ImportError:  # pragma: no cover - dependency hint
+except ImportError:
     sys.exit("error: curl_cffi is required. Install it with: pip install curl_cffi")
 
 
-# ── Firebase (optional upload to Firestore) ───────────────────────────────────
 _firebase_initialized = False
 
-def _upload_to_firestore(
-    uuid: str,
-    title: str,
-    markdown: str,
-    author: str,
-    created: str,
-    message_count: int,
-    source_url: str,
-    collection: str = "chats",
-) -> bool:
-    """Upload a single transcript to Firestore.
-
-    Returns *True* on success, *False* if Firebase is not configured or fails.
-
-    Configuration (set before running):
-      FIREBASE_SERVICE_ACCOUNT_KEY  – path to the Firebase service-account JSON
-    """
+def _upload_to_firestore(uuid: str, title: str, markdown: str, author: str,
+                         created: str, message_count: int, source_url: str,
+                         collection: str = "chats") -> bool:
     global _firebase_initialized
-
     if not _firebase_initialized:
         key_path = os.environ.get("FIREBASE_SERVICE_ACCOUNT_KEY")
         if not key_path:
@@ -70,11 +32,7 @@ def _upload_to_firestore(
             import firebase_admin
             from firebase_admin import credentials, firestore
         except ImportError:
-            print(
-                "warning: firebase-admin not installed; "
-                "install with: pip install firebase-admin",
-                file=sys.stderr,
-            )
+            print("warning: firebase-admin not installed", file=sys.stderr)
             return False
         try:
             cred = credentials.Certificate(key_path)
@@ -91,31 +49,25 @@ def _upload_to_firestore(
 
     doc_ref = db.collection(collection).document(uuid)
     try:
-        doc_ref.set(
-            {
-                "uuid": uuid,
-                "title": title,
-                "markdown": markdown,
-                "author": author,
-                "created": created,
-                "messageCount": message_count,
-                "sourceUrl": source_url,
-                "exportedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            }
-        )
+        doc_ref.set({
+            "uuid": uuid,
+            "title": title,
+            "markdown": markdown,
+            "author": author,
+            "created": created,
+            "messageCount": message_count,
+            "sourceUrl": source_url,
+            "exportedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        })
         return True
     except Exception as exc:
         print(f"warning: Firestore upload failed for {uuid}: {exc}", file=sys.stderr)
         return False
 
 
-# ── Core API & rendering ────────────────────────────────────────────────────
-
 API_URL = "https://claude.ai/api/chat_snapshots/{uuid}"
 SHARE_URL = "https://claude.ai/share/{uuid}"
-UUID_RE = re.compile(
-    r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
-)
+UUID_RE = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
 IMPERSONATE = "chrome"
 TIMEOUT = 30
 MAX_SLUG = 80
@@ -127,17 +79,13 @@ class ExportError(Exception):
 
 
 def extract_uuid(raw: str) -> str:
-    """Pull the snapshot UUID out of a share URL or a bare UUID."""
     match = UUID_RE.search(raw)
     if not match:
-        raise ExportError(
-            "no UUID found -- expected https://claude.ai/share/<uuid> or a bare UUID"
-        )
+        raise ExportError("no UUID found")
     return match.group(0).lower()
 
 
 def fetch_snapshot(uuid: str) -> dict:
-    """Fetch the snapshot JSON for a public share."""
     try:
         response = cffi_requests.get(
             API_URL.format(uuid=uuid),
@@ -149,7 +97,7 @@ def fetch_snapshot(uuid: str) -> dict:
         raise ExportError(f"network error: {type(exc).__name__}: {exc}") from exc
 
     if response.status_code == 404:
-        raise ExportError("not found -- the share was deleted, revoked, or never public")
+        raise ExportError("share not found (deleted or never public)")
     if response.status_code == 403:
         detail = ""
         try:
@@ -158,26 +106,22 @@ def fetch_snapshot(uuid: str) -> dict:
         except Exception:
             pass
         if detail:
-            raise ExportError(f"not public -- {detail.rstrip('.')} to view this share")
-        raise ExportError(
-            "blocked by Cloudflare -- TLS impersonation was rejected; "
-            "try upgrading curl_cffi"
-        )
+            raise ExportError(f"not public: {detail}")
+        raise ExportError("blocked by Cloudflare")
     if response.status_code != 200:
-        raise ExportError(f"unexpected HTTP {response.status_code}")
+        raise ExportError(f"HTTP {response.status_code}")
 
     try:
         payload = response.json()
     except Exception as exc:
-        raise ExportError("response was not JSON (likely a challenge page)") from exc
+        raise ExportError("response was not JSON") from exc
 
     if not isinstance(payload, dict):
-        raise ExportError("unexpected JSON shape (expected an object)")
+        raise ExportError("unexpected JSON shape")
     return payload
 
 
 def _blocks_to_text(blocks: list, include_thinking: bool) -> str:
-    """Flatten a structured `content` block list into markdown."""
     parts: list[str] = []
     for block in blocks:
         if not isinstance(block, dict):
@@ -204,7 +148,6 @@ def _blocks_to_text(blocks: list, include_thinking: bool) -> str:
 
 
 def message_body(message: dict, include_thinking: bool) -> str:
-    """Prefer structured content blocks, fall back to the flattened text."""
     content = message.get("content")
     if isinstance(content, list) and content:
         body = _blocks_to_text(content, include_thinking)
@@ -225,13 +168,9 @@ def _attachment_names(message: dict) -> list[str]:
 
 
 def render_markdown(snapshot: dict, uuid: str, include_thinking: bool) -> tuple[str, int]:
-    """Render the snapshot as a markdown transcript. Returns (text, message_count)."""
-    title = (snapshot.get("snapshot_name") or "").strip() or "Untitled Claude conversation"
+    title = (snapshot.get("snapshot_name") or "").strip() or "Untitled"
     creator = snapshot.get("creator") or {}
-    author = (
-        (snapshot.get("created_by") or "").strip()
-        or (creator.get("full_name") or "").strip()
-    )
+    author = (snapshot.get("created_by") or "").strip() or (creator.get("full_name") or "").strip()
     created = (snapshot.get("created_at") or "")[:10]
     messages = sorted(
         (m for m in (snapshot.get("chat_messages") or []) if isinstance(m, dict)),
@@ -252,14 +191,10 @@ def render_markdown(snapshot: dict, uuid: str, include_thinking: bool) -> tuple[
 
     for message in messages:
         sender = (message.get("sender") or "").lower()
-        label = {"human": "Human", "assistant": "Assistant"}.get(
-            sender, sender.title() or "Unknown"
-        )
+        label = {"human": "Human", "assistant": "Assistant"}.get(sender, sender.title() or "Unknown")
         lines += ["", "---", "", f"## {label}", ""]
-
         body = message_body(message, include_thinking)
         lines.append(body if body else "_[empty message]_")
-
         names = _attachment_names(message)
         if names:
             lines += ["", f"_Attachments: {', '.join(names)}_"]
@@ -268,7 +203,6 @@ def render_markdown(snapshot: dict, uuid: str, include_thinking: bool) -> tuple[
 
 
 def slugify(text: str, fallback: str) -> str:
-    """Filesystem-safe slug that preserves non-Latin scripts."""
     normalised = unicodedata.normalize("NFC", text or "")
     kept = []
     for char in normalised:
@@ -281,7 +215,6 @@ def slugify(text: str, fallback: str) -> str:
 
 
 def unique_path(directory: Path, slug: str) -> Path:
-    """Never overwrite an existing export."""
     candidate = directory / f"{slug}.md"
     counter = 2
     while candidate.exists():
@@ -291,7 +224,6 @@ def unique_path(directory: Path, slug: str) -> Path:
 
 
 def read_link_file(path: Path) -> list[str]:
-    """Newline-delimited links; blank lines and #-comments ignored."""
     try:
         raw = path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -305,7 +237,6 @@ def read_link_file(path: Path) -> list[str]:
 
 
 def collect_links(positionals: list[str], link_files: list[str]) -> list[str]:
-    """Positionals may be links or a path to a links file."""
     links: list[str] = []
     for item in positionals:
         candidate = Path(item)
@@ -319,12 +250,6 @@ def collect_links(positionals: list[str], link_files: list[str]) -> list[str]:
 
 
 class Manifest:
-    """The record of what has already been exported, and where it landed.
-
-    This is what makes a re-run cheap: a UUID listed here whose transcript is
-    still on disk is never requested from the network again.
-    """
-
     def __init__(self, path: Path, outdir: Path, entries: dict):
         self.path = path
         self.outdir = outdir
@@ -334,11 +259,6 @@ class Manifest:
 
     @classmethod
     def load(cls, outdir: Path) -> "Manifest":
-        """Find and read the manifest governing this output directory.
-
-        A missing or unreadable manifest is not an error -- it just means
-        nothing is known yet, so everything gets fetched.
-        """
         path = cls._locate(outdir)
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -349,13 +269,6 @@ class Manifest:
 
     @staticmethod
     def _locate(outdir: Path) -> Path:
-        """Prefer a manifest in outdir, else one just above it.
-
-        Transcripts get tidied into a subdirectory after the fact, leaving the
-        manifest behind in the parent. Starting a fresh manifest in the new
-        directory would re-download every conversation the old one knows about,
-        so an existing one within two levels up is adopted instead.
-        """
         here = outdir / MANIFEST_NAME
         if here.exists():
             return here
@@ -366,11 +279,6 @@ class Manifest:
         return here
 
     def _index(self) -> dict[str, Path]:
-        """Lazily map transcript filename -> location, one level deep.
-
-        Built only when a recorded path has gone missing, which is the moved-
-        into-a-subdirectory case.
-        """
         if self._by_name is not None:
             return self._by_name
         index: dict[str, Path] = {}
@@ -395,7 +303,6 @@ class Manifest:
             return []
 
     def lookup(self, uuid: str) -> Path | None:
-        """The already-exported file for this UUID, if it is still on disk."""
         entry = self.entries.get(uuid)
         if not isinstance(entry, dict):
             return None
@@ -413,14 +320,12 @@ class Manifest:
         return (entry.get("messages") or 0) if isinstance(entry, dict) else 0
 
     def _record_name(self, path: Path) -> str:
-        """Store the location relative to the manifest, so moves stay legible."""
         try:
             return path.resolve().relative_to(self.path.parent.resolve()).as_posix()
         except ValueError:
             return path.name
 
     def note_location(self, uuid: str, path: Path) -> None:
-        """Point a stale entry at where its transcript actually lives now."""
         entry = self.entries.get(uuid)
         if not isinstance(entry, dict):
             return
@@ -453,17 +358,10 @@ class Manifest:
             self.dirty = False
 
 
-def export_one(
-    link: str,
-    outdir: Path,
-    include_thinking: bool,
-    manifest: Manifest,
-    force: bool,
-    firebase_collection: str | None = None,  # None = skip upload
-) -> tuple[str, Path, int]:
-    """Returns (status, path, message_count) where status is 'written' or 'skipped'."""
+def export_one(link: str, outdir: Path, include_thinking: bool,
+               manifest: Manifest, force: bool,
+               firebase_collection: str | None = None) -> tuple[str, Path, int]:
     uuid = extract_uuid(link)
-
     existing = manifest.lookup(uuid)
     if existing is not None and not force:
         manifest.note_location(uuid, existing)
@@ -478,86 +376,37 @@ def export_one(
         slug = slugify(snapshot.get("snapshot_name") or "", uuid)
         path = unique_path(outdir, slug)
     path.write_text(markdown, encoding="utf-8")
-
     manifest.record(uuid, path, snapshot, count)
 
-    # ── Upload to Firestore — data still in memory, no disk re-read ─────────
     if firebase_collection:
         creator = snapshot.get("creator") or {}
-        author = (
-            (snapshot.get("created_by") or "").strip()
-            or (creator.get("full_name") or "").strip()
-        )
+        author = (snapshot.get("created_by") or "").strip() or (creator.get("full_name") or "").strip()
         created = (snapshot.get("created_at") or "")[:10]
-        title = (snapshot.get("snapshot_name") or "").strip() or "Untitled Claude conversation"
+        title = (snapshot.get("snapshot_name") or "").strip() or "Untitled"
         _upload_to_firestore(
-            uuid=uuid,
-            title=title,
-            markdown=markdown,
-            author=author,
-            created=created,
-            message_count=count,
-            source_url=SHARE_URL.format(uuid=uuid),
-            collection=firebase_collection,
+            uuid=uuid, title=title, markdown=markdown, author=author,
+            created=created, message_count=count,
+            source_url=SHARE_URL.format(uuid=uuid), collection=firebase_collection,
         )
 
     return "written", path, count
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Save claude.ai share links as markdown transcripts.",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=(
-            "examples:\n"
-            "  %(prog)s https://claude.ai/share/<uuid>\n"
-            "  %(prog)s links.txt -o out/\n"
-            "  %(prog)s -f links.txt -o out/\n"
-        ),
-    )
-    parser.add_argument(
-        "inputs",
-        nargs="*",
-        metavar="LINK|FILE",
-        help="share URLs, bare UUIDs, or a path to a newline-delimited links file",
-    )
-    parser.add_argument(
-        "-f",
-        "--file",
-        action="append",
-        default=[],
-        metavar="FILE",
-        help="read links from FILE (repeatable)",
-    )
-    parser.add_argument(
-        "-o",
-        "--out",
-        default=".",
-        metavar="DIR",
-        help="output directory (default: current directory)",
-    )
-    parser.add_argument(
-        "--include-thinking",
-        action="store_true",
-        help="include thinking blocks when the snapshot exposes them",
-    )
-    parser.add_argument(
-        "--force",
-        action="store_true",
-        help="re-fetch conversations already exported to DIR, replacing them",
-    )
-    parser.add_argument(
-        "--firebase-upload",
-        nargs="?",
-        const="chats",
-        metavar="COLLECTION",
-        default=None,
-        help=(
-            "upload transcripts to Firestore (requires "
-            "FIREBASE_SERVICE_ACCOUNT_KEY env var). "
-            "Optionally specify a Firestore collection name (default: 'chats')"
-        ),
-    )
+    parser = argparse.ArgumentParser(description="Save claude.ai share links as markdown transcripts.")
+    parser.add_argument("inputs", nargs="*", metavar="LINK|FILE",
+                        help="share URLs, bare UUIDs, or a links file")
+    parser.add_argument("-f", "--file", action="append", default=[], metavar="FILE",
+                        help="read links from FILE (repeatable)")
+    parser.add_argument("-o", "--out", default=".", metavar="DIR",
+                        help="output directory (default: current directory)")
+    parser.add_argument("--include-thinking", action="store_true",
+                        help="include thinking blocks")
+    parser.add_argument("--force", action="store_true",
+                        help="re-fetch already exported conversations")
+    parser.add_argument("--firebase-upload", nargs="?", const="chats", metavar="COLLECTION",
+                        default=None,
+                        help="upload transcripts to Firestore (requires FIREBASE_SERVICE_ACCOUNT_KEY env var)")
     args = parser.parse_args()
 
     if not args.inputs and not args.file:
@@ -599,11 +448,7 @@ def main() -> int:
     for link in ordered:
         try:
             status, path, count = export_one(
-                link,
-                outdir,
-                args.include_thinking,
-                manifest,
-                args.force,
+                link, outdir, args.include_thinking, manifest, args.force,
                 firebase_collection=args.firebase_upload,
             )
         except ExportError as exc:

@@ -1,18 +1,11 @@
-# Firebase service account key (CONTAINS PRIVATE KEYS - DO NOT COMMIT)
 *-firebase-adminsdk-*.json
 serviceAccountKey.json
-
-# Python
 __pycache__/
 *.pyc
 .env
 venv/
 .venv/
-
-# Ignore large transcript files but keep manifest
 exports/*.md
 exports/**/*.md
-
-# OS files
 .DS_Store
 Thumbs.db

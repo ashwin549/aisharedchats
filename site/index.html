@@ -13,11 +13,11 @@
     :root {
       --bg: #0f1117; --surface: #1a1d27; --surface2: #222538;
       --border: #2a2d3e; --text: #e1e4ed; --text-secondary: #8b8fa3;
-      --accent: #6c8cff; --green: #34d399; --orange: #fbbf24; --radius: 10px;
+      --accent: #6c8cff; --orange: #fbbf24; --radius: 10px;
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg); color: var(--text); line-height: 1.6; min-height: 100vh;
+      background: var(--bg); color: var(--text); line-height: 1.6;
     }
     .container { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
     header {
@@ -47,7 +47,7 @@
     .badge-btn {
       padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border);
       background: transparent; color: var(--text-secondary); font-size: 13px;
-      cursor: pointer; transition: all .15s; font-family: inherit;
+      cursor: pointer; font-family: inherit;
     }
     .badge-btn:hover { border-color: var(--accent); color: var(--accent); }
     .badge-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
@@ -57,19 +57,18 @@
     .chat-card {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius); padding: 18px; cursor: pointer;
-      transition: all .15s; display: flex; flex-direction: column;
+      display: flex; flex-direction: column;
       text-decoration: none; color: inherit;
     }
     .chat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
     .chat-card .title {
-      font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 8px; line-height: 1.3;
+      font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 8px;
     }
     .chat-card .meta { display: flex; gap: 12px; font-size: 12px; color: var(--text-secondary); flex-wrap: wrap; }
-    .chat-card .meta span { display: flex; align-items: center; gap: 4px; }
     .chat-card .badge-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
     .chat-card .badge {
       display: inline-block; padding: 2px 10px; border-radius: 20px;
-      font-size: 11px; font-weight: 500; background: var(--surface2); color: var(--text-secondary);
+      font-size: 11px; background: var(--surface2); color: var(--text-secondary);
     }
     .chat-card .badge.today {
       background: var(--orange); color: #000; animation: pulse 2s infinite;
@@ -100,9 +99,9 @@
       padding: 18px 24px; border-bottom: 1px solid var(--border);
     }
     .modal-header h2 { font-size: 18px; color: #fff; }
-    .modal-close { background: none; border: none; color: var(--text-secondary); font-size: 24px; cursor: pointer; padding: 4px; }
+    .modal-close { background: none; border: none; color: var(--text-secondary); font-size: 24px; cursor: pointer; }
     .modal-close:hover { color: var(--text); }
-    .modal-body { padding: 24px; overflow-y: auto; flex: 1; line-height: 1.7; }
+    .modal-body { padding: 24px; overflow-y: auto; flex: 1; }
     .modal-body h1 { font-size: 24px; margin: 0 0 12px; color: #fff; }
     .modal-body h2 { font-size: 18px; margin: 20px 0 10px; color: #fff; }
     .modal-body hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
@@ -114,7 +113,6 @@
     }
     .modal-body code { background: var(--surface2); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
     .modal-body pre { background: var(--surface2); padding: 16px; border-radius: var(--radius); overflow-x: auto; margin: 12px 0; }
-    .modal-body pre code { background: none; padding: 0; }
     .modal-body ul, .modal-body ol { padding-left: 24px; margin: 8px 0; }
     .modal-body a { color: var(--accent); }
     .modal-meta {
@@ -122,18 +120,18 @@
       padding: 12px 24px; border-top: 1px solid var(--border); flex-wrap: wrap;
     }
     .modal-meta a { color: var(--accent); text-decoration: none; }
-    .modal-meta a:hover { text-decoration: underline; }
-    .copy-btn {
-      background: var(--surface2); border: 1px solid var(--border);
-      color: var(--text-secondary); padding: 4px 12px; border-radius: 6px;
-      font-size: 12px; cursor: pointer; transition: all .15s; font-family: inherit;
-    }
-    .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
     .error-banner {
       background: #7f1d1d; border: 1px solid #dc2626; border-radius: var(--radius);
       padding: 14px 18px; margin-bottom: 20px; color: #fca5a5; font-size: 14px;
       white-space: pre-wrap;
     }
+    .copy-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text-secondary); padding: 4px 12px; border-radius: 6px;
+      font-size: 12px; cursor: pointer; font-family: inherit;
+    }
+    .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .copy-btn.copied { color: var(--accent); border-color: var(--accent); }
   </style>
 </head>
 <body>
@@ -151,7 +149,7 @@
       <div class="stat-card"><div class="num" id="newToday">-</div><div class="label">New Today</div></div>
     </div>
     <div class="controls">
-      <input type="text" class="search-bar" id="search" placeholder="Search by title, author, or UUID..." oninput="render()" style="margin-bottom:0;flex:1;min-width:200px" />
+      <input type="text" class="search-bar" id="search" placeholder="Search..." oninput="render()" style="margin-bottom:0;flex:1;min-width:200px" />
       <button class="badge-btn" id="filterNew" onclick="toggleNewFilter()">New Today</button>
     </div>
     <div id="chatGrid" class="chat-grid"></div>
@@ -180,19 +178,25 @@
     const db = firebase.firestore();
     let allChats = [];
     let showNewOnly = false;
-    function isToday(d) { return d ? new Date(d).toDateString() === new Date().toDateString() : false; }
-    function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    function isToday(d) {
+      return d ? new Date(d).toDateString() === new Date().toDateString() : false;
+    }
+    function esc(s) {
+      if (!s) return '';
+      var d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
     function md2html(t) {
       if (!t) return '';
       var h = esc(t);
-      h = h.replace(/^##### (.*$)/gm, '<h5>$1</h5>');
-      h = h.replace(/^#### (.*$)/gm, '<h4>$1</h4>');
       h = h.replace(/^### (.*$)/gm, '<h3>$1</h3>');
       h = h.replace(/^## (.*$)/gm, '<h2>$1</h2>');
       h = h.replace(/^# (.*$)/gm, '<h1>$1</h1>');
       h = h.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      h = h.replace(/`([^`]+)`/g, '<code>$1</code>');
       h = h.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+      h = h.replace(/`([^`]+)`/g, '<code>$1</code>');
       h = h.replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>');
       h = h.replace(/^---$/gm, '<hr>');
       h = h.replace(/\n\n/g, '</p><p>');
@@ -200,59 +204,64 @@
       return '<p>' + h + '</p>';
     }
     function showError(msg) {
-      var el = document.getElementById('errorContainer');
-      el.textContent = 'ERROR: ' + msg;
-      el.style.display = 'block';
+      document.getElementById('errorContainer').textContent = msg;
+      document.getElementById('errorContainer').style.display = 'block';
     }
     async function loadChats() {
-      document.getElementById('chatGrid').innerHTML = '<div class="loading" style="grid-column:1/-1"><div class="spinner"></div><p>Loading chats from Firebase...</p></div>';
-      console.log('Firebase project:', firebase.app().options.projectId);
+      document.getElementById('chatGrid').innerHTML =
+        '<div class="loading" style="grid-column:1/-1"><div class="spinner"></div><p>Loading...</p></div>';
       var snap;
       try {
         snap = await db.collection('chats').get();
       } catch (err) {
-        console.error('Firestore query failed:', err);
-        showError('Firestore query failed: ' + (err.message || err));
-        document.getElementById('chatGrid').innerHTML = '<div class="empty" style="grid-column:1/-1"><h2>Connection Error</h2><p>Could not reach Firestore. Check console for details.</p></div>';
+        showError('Firestore error: ' + (err.message || err));
+        document.getElementById('chatGrid').innerHTML =
+          '<div class="empty" style="grid-column:1/-1"><h2>Error</h2><p>Could not load chats.</p></div>';
         return;
       }
       allChats = [];
-      snap.forEach(function(doc) { var d = doc.data(); d.id = doc.id; allChats.push(d); });
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        d.id = doc.id;
+        allChats.push(d);
+      });
       document.getElementById('errorContainer').style.display = 'none';
-      console.log('Loaded ' + allChats.length + ' chats from Firestore');
-      allChats.sort(function(a,b){ return (b.exportedAt||'').localeCompare(a.exportedAt||''); });
-      var total = allChats.length;
-      var msgs = allChats.reduce(function(s, c) { return s + (c.messageCount || 0); }, 0);
-      var newC = allChats.filter(function(c) { return isToday(c.exportedAt); }).length;
-      document.getElementById('totalChats').textContent = total;
-      document.getElementById('totalMessages').textContent = msgs;
-      document.getElementById('newToday').textContent = newC;
-      document.getElementById('subtitle').textContent = total + ' chat' + (total !== 1 ? 's' : '') + ' stored';
+      allChats.sort(function(a, b) {
+        return (b.exportedAt || '').localeCompare(a.exportedAt || '');
+      });
+      document.getElementById('totalChats').textContent = allChats.length;
+      document.getElementById('totalMessages').textContent =
+        allChats.reduce(function(s, c) { return s + (c.messageCount || 0); }, 0);
+      document.getElementById('newToday').textContent =
+        allChats.filter(function(c) { return isToday(c.exportedAt); }).length;
+      document.getElementById('subtitle').textContent =
+        allChats.length + ' chat' + (allChats.length !== 1 ? 's' : '') + ' stored';
       render();
     }
     function render() {
       var q = document.getElementById('search').value.toLowerCase();
       var grid = document.getElementById('chatGrid');
       var filtered = allChats.filter(function(c) {
-        var s = (c.title||'') + ' ' + (c.author||'') + ' ' + (c.id||'');
-        if (q && s.toLowerCase().indexOf(q) === -1) return false;
         if (showNewOnly && !isToday(c.exportedAt)) return false;
-        return true;
+        if (!q) return true;
+        return ((c.title || '') + ' ' + (c.author || '') + ' ' + (c.id || '')).toLowerCase().indexOf(q) !== -1;
       });
       if (!filtered.length) {
-        grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><h2>' + (allChats.length === 0 ? 'No chats yet' : 'No results') + '</h2><p>Chats appear once the daily export runs.</p></div>';
+        grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><h2>' +
+          (allChats.length === 0 ? 'No chats yet' : 'No results') +
+          '</h2></div>';
         return;
       }
       grid.innerHTML = filtered.map(function(c) {
         return '<div class="chat-card" onclick="openChat(\'' + c.id + '\')">' +
           '<div class="title">' + esc(c.title || 'Untitled') + '</div>' +
           '<div class="meta">' +
-            (c.author ? '<span> ' + esc(c.author) + '</span>' : '') +
-            (c.created ? '<span> ' + c.created + '</span>' : '') +
-            '<span> ' + (c.messageCount || '?') + ' msgs</span>' +
+            (c.author ? '<span>' + esc(c.author) + '</span>' : '') +
+            (c.created ? '<span>' + c.created + '</span>' : '') +
+            '<span>' + (c.messageCount || '?') + ' msgs</span>' +
           '</div>' +
           '<div class="badge-row">' +
-            '<span class="badge">' + (c.id || '').substring(0,8) + '...</span>' +
+            '<span class="badge">' + c.id.substring(0, 8) + '...</span>' +
             (isToday(c.exportedAt) ? '<span class="badge today">New Today</span>' : '') +
           '</div></div>';
       }).join('');
@@ -267,26 +276,36 @@
       if (!c) return;
       document.getElementById('modalTitle').textContent = c.title || 'Untitled';
       document.getElementById('modalMeta').innerHTML =
-        (c.author ? '<span> ' + esc(c.author) + '</span>' : '') +
-        (c.created ? '<span> ' + c.created + '</span>' : '') +
-        '<span> ' + (c.messageCount || '?') + ' messages</span>' +
-        (c.sourceUrl ? '<a href="' + c.sourceUrl + '" target="_blank"> View Original</a>' : '') +
-        '<span><code style="font-size:11px;background:var(--surface2);padding:1px 6px;border-radius:4px">' + c.id + '</code></span>' +
-        '<button class="copy-btn" onclick="copyMd()"> Copy</button>';
+        (c.author ? '<span>' + esc(c.author) + '</span>' : '') +
+        (c.created ? '<span>' + c.created + '</span>' : '') +
+        '<span>' + (c.messageCount || '?') + ' messages</span>' +
+        (c.sourceUrl ? '<a href="' + c.sourceUrl + '" target="_blank">View Original</a>' : '') +
+        '<span><code style="background:var(--surface2);padding:1px 6px;border-radius:4px">' + c.id + '</code></span>' +
+        '<button class="copy-btn" onclick="copyMd()">Copy</button>';
       document.getElementById('modalBody').innerHTML = md2html(c.markdown);
       window._md = c.markdown;
       document.getElementById('modal').classList.add('open');
     }
-    function closeModal() { document.getElementById('modal').classList.remove('open'); }
+    function closeModal() {
+      document.getElementById('modal').classList.remove('open');
+    }
     function copyMd() {
       navigator.clipboard.writeText(window._md || '').then(function() {
         var btn = document.querySelector('.copy-btn');
-        btn.textContent = ' Copied!';
-        setTimeout(function() { btn.textContent = ' Copy'; }, 2000);
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
       });
     }
-    document.getElementById('modal').addEventListener('click', function(e) { if (e.target === e.currentTarget) closeModal(); });
-    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+    document.getElementById('modal').addEventListener('click', function(e) {
+      if (e.target === e.currentTarget) closeModal();
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeModal();
+    });
     loadChats();
   </script>
 </body>
