@@ -2,3 +2,11 @@
 # Example:
 # https://claude.ai/share/abc12345-...
 # abc12345-...
+https://claude.ai/share/33dd4a49-be99-4c56-872f-09ea030376ed
+https://claude.ai/share/805ee3e5-eb74-43b6-8036-03615b303f6d
+https://claude.ai/share/992fc340-08a2-48d2-9337-6fd5de744a23
+https://claude.ai/share/b76ffb8c-8a9d-43fb-b02d-0990e2e2fc7c
+https://claude.ai/share/cc32d405-cb53-4e52-a1a0-9b4df4e528ac
+https://claude.ai/share/dc9399d1-fb2c-4958-9486-11bebb55746f
+https://claude.ai/share/eb5d7782-0093-4bec-b86d-03c23dfbb1b1
+https://claude.ai/share/ec8b0563-d80b-4882-82e8-5504e3229a17

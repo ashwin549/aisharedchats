@@ -1,1 +1,17 @@
-aisharedchats-firebase-adminsdk-fbsvc-0b5b695f92.json
+# Firebase service account key (CONTAINS PRIVATE KEYS - DO NOT COMMIT)
+*-firebase-adminsdk-*.json
+serviceAccountKey.json
+
+# Python
+__pycache__/
+*.pyc
+.env
+venv/
+.venv/
+
+# Exports
+exports/
+
+# OS files
+.DS_Store
+Thumbs.db

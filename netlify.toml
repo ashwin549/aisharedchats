@@ -1,6 +1,12 @@
 [build]
   publish = "site"
 
+# Firebase SDK uses eval internally - allow it
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-eval' https://www.gstatic.com https://*.firebaseio.com https://*.firebase.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.firebaseio.com https://*.firebase.com https://*.googleapis.com https://identitytoolkit.googleapis.com wss://*.firebaseio.com; font-src 'self' data:; frame-src 'self' https://*.firebase.com;"
+
 # Redirect all routes to index.html (SPA support)
 [[redirects]]
   from = "/*"
