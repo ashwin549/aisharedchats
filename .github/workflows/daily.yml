@@ -22,13 +22,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install curl_cffi firebase-admin ddgs
 
+      - name: Write Firebase service account to temp file
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}' > /tmp/firebase-key.json
+
       - name: Discover new Claude share links from search
         run: |
           python discover_links.py --max 50
 
       - name: Run export + upload to Firebase
         env:
-          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+          FIREBASE_SERVICE_ACCOUNT_KEY: /tmp/firebase-key.json
         run: |
           python claude_sharedchats.py links.txt --firebase-upload chats -o exports
 
