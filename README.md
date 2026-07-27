@@ -23,6 +23,6 @@ Alternatively, you can just visit my website (https://aisharedchats.netlify.app/
 - This only works for convos which have been shared. Private convos cannot be accessed. Shared convos are public, so treat it similar to how you would treat any public content on the internet
 - Not all shared convos can be accessed either. This just gets the ones which have been indexed by duckduckgo or google, which is a rather small number compared to the overall amount
 
-#Future scope
+# Future scope
 
 May look into adding other sites like grok and chatgpt
