@@ -5,6 +5,9 @@ on:
     - cron: '0 8 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   export:
     runs-on: ubuntu-latest
@@ -44,7 +47,7 @@ jobs:
         run: |
           echo "Export exit code: ${{ steps.export.outputs.exit_code }}"
 
-      - name: Commit updated links & manifest
+      - name: Commit and push
         if: always()
         run: |
           git config user.name "github-actions[bot]"
