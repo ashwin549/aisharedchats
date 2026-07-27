@@ -195,9 +195,9 @@ def _blocks_to_text(blocks: list, include_thinking: bool) -> str:
                 quoted = "\n".join(f"> {line}" for line in thinking.splitlines())
                 parts.append(f"> **Thinking**\n>\n{quoted}")
         elif kind in ("tool_use", "server_tool_use"):
-            parts.append(f"_[tool: {block.get('name') or 'unknown'}]_")
+            parts.append(f"_[Tool: {block.get('name') or 'unknown'}]_")
         elif kind in ("tool_result", "web_search_tool_result"):
-            parts.append("_[tool result]_")
+            parts.append("_[Tool result (content not available via share API)]_")
         else:
             parts.append(f"_[{kind or 'unknown'} block]_")
     return "\n\n".join(parts)
