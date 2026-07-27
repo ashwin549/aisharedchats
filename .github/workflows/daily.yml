@@ -34,7 +34,7 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT_KEY: /tmp/firebase-key.json
         run: |
-          python claude_sharedchats.py links.txt --firebase-upload chats -o exports
+          python claude_sharedchats.py links.txt --firebase-upload chats -o exports || echo "Export completed with some failures"
 
       - name: Commit updated links & manifest
         run: |

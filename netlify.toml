@@ -1,11 +1,17 @@
 [build]
   publish = "site"
 
-# Firebase SDK uses eval internally - allow it
+# Firebase SDK needs eval, inline scripts, and source maps
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-eval' https://www.gstatic.com https://*.firebaseio.com https://*.firebase.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.firebaseio.com https://*.firebase.com https://*.googleapis.com https://identitytoolkit.googleapis.com wss://*.firebaseio.com; font-src 'self' data:; frame-src 'self' https://*.firebase.com;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.gstatic.com https://*.firebaseio.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://www.gstatic.com https://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com wss://*.firebaseio.com; font-src 'self' data:;"
+
+# Override Netlify's default Permissions-Policy that triggers warnings
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
 
 # Redirect all routes to index.html (SPA support)
 [[redirects]]
