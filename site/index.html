@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Shared Chats</title>
+  <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js">
+  </script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js">
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --surface2: #222538;
+      --border: #2a2d3e; --text: #e1e4ed; --text-secondary: #8b8fa3;
+      --accent: #6c8cff; --green: #34d399; --orange: #fbbf24; --radius: 10px;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.6; min-height: 100vh;
+    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 0; border-bottom: 1px solid var(--border); margin-bottom: 28px;
+      flex-wrap: wrap; gap: 12px;
+    }
+    header h1 { font-size: 22px; font-weight: 700; color: #fff; }
+    header h1 span { color: var(--accent); }
+    header .subtitle { font-size: 13px; color: var(--text-secondary); }
+    .stats { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 22px; flex: 1; min-width: 140px;
+    }
+    .stat-card .num { font-size: 28px; font-weight: 700; color: #fff; }
+    .stat-card .label { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+    .search-bar {
+      width: 100%; padding: 12px 16px; border-radius: var(--radius);
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text); font-size: 15px; margin-bottom: 20px;
+    }
+    .search-bar:focus { outline: none; border-color: var(--accent); }
+    .controls {
+      display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 20px;
+    }
+    .badge-btn {
+      padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border);
+      background: transparent; color: var(--text-secondary); font-size: 13px;
+      cursor: pointer; transition: all .15s; font-family: inherit;
+    }
+    .badge-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .badge-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .chat-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px;
+    }
+    .chat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px; cursor: pointer;
+      transition: all .15s; display: flex; flex-direction: column;
+      text-decoration: none; color: inherit;
+    }
+    .chat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .chat-card .title {
+      font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 8px; line-height: 1.3;
+    }
+    .chat-card .meta { display: flex; gap: 12px; font-size: 12px; color: var(--text-secondary); flex-wrap: wrap; }
+    .chat-card .meta span { display: flex; align-items: center; gap: 4px; }
+    .chat-card .badge-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+    .chat-card .badge {
+      display: inline-block; padding: 2px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 500; background: var(--surface2); color: var(--text-secondary);
+    }
+    .chat-card .badge.today {
+      background: var(--orange); color: #000; animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    .loading { text-align: center; padding: 80px 20px; color: var(--text-secondary); }
+    .loading .spinner {
+      width: 36px; height: 36px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin .8s linear infinite; margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
+    .empty h2 { font-size: 20px; margin-bottom: 8px; color: var(--text); }
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; width: 100%; max-width: 800px;
+      max-height: 85vh; display: flex; flex-direction: column;
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 24px; border-bottom: 1px solid var(--border);
+    }
+    .modal-header h2 { font-size: 18px; color: #fff; }
+    .modal-close { background: none; border: none; color: var(--text-secondary); font-size: 24px; cursor: pointer; padding: 4px; }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 24px; overflow-y: auto; flex: 1; line-height: 1.7; }
+    .modal-body h1 { font-size: 24px; margin: 0 0 12px; color: #fff; }
+    .modal-body h2 { font-size: 18px; margin: 20px 0 10px; color: #fff; }
+    .modal-body hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+    .modal-body p { margin: 8px 0; }
+    .modal-body strong { color: #fff; }
+    .modal-body blockquote {
+      border-left: 3px solid var(--accent); padding: 8px 16px; margin: 12px 0;
+      background: var(--surface2); border-radius: 0 var(--radius) var(--radius) 0;
+    }
+    .modal-body code { background: var(--surface2); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+    .modal-body pre { background: var(--surface2); padding: 16px; border-radius: var(--radius); overflow-x: auto; margin: 12px 0; }
+    .modal-body pre code { background: none; padding: 0; }
+    .modal-body ul, .modal-body ol { padding-left: 24px; margin: 8px 0; }
+    .modal-body a { color: var(--accent); }
+    .modal-meta {
+      display: flex; gap: 14px; font-size: 13px; color: var(--text-secondary);
+      padding: 12px 24px; border-top: 1px solid var(--border); flex-wrap: wrap;
+    }
+    .modal-meta a { color: var(--accent); text-decoration: none; }
+    .modal-meta a:hover { text-decoration: underline; }
+    .copy-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text-secondary); padding: 4px 12px; border-radius: 6px;
+      font-size: 12px; cursor: pointer; transition: all .15s; font-family: inherit;
+    }
+    .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .error-banner {
+      background: #7f1d1d; border: 1px solid #dc2626; border-radius: var(--radius);
+      padding: 14px 18px; margin-bottom: 20px; color: #fca5a5; font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>AI <span>Shared Chats</span></h1>
+        <div class="subtitle" id="subtitle">Loading...</div>
+      </div>
+    </header>
+    <div id="errorContainer" class="error-banner" style="display:none"></div>
+    <div class="stats">
+      <div class="stat-card"><div class="num" id="totalChats">-</div><div class="label">Total Chats</div></div>
+      <div class="stat-card"><div class="num" id="totalMessages">-</div><div class="label">Total Messages</div></div>
+      <div class="stat-card"><div class="num" id="newToday">-</div><div class="label">New Today</div></div>
+    </div>
+    <div class="controls">
+      <input type="text" class="search-bar" id="search" placeholder="Search by title, author, or UUID..." oninput="render()" style="margin-bottom:0;flex:1;min-width:200px" />
+      <button class="badge-btn" id="filterNew" onclick="toggleNewFilter()">New Today</button>
+    </div>
+    <div id="chatGrid" class="chat-grid"></div>
+  </div>
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitle">Chat</h2>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-meta" id="modalMeta"></div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB_DLmvXpiNJmYNArp-I5CGddmxNC4JdcQ",
+      authDomain: "aisharedchats.firebaseapp.com",
+      projectId: "aisharedchats",
+      storageBucket: "aisharedchats.firebasestorage.app",
+      messagingSenderId: "857043333029",
+      appId: "1:857043333029:web:ea0f59ab5cd5cb36e0c24c",
+      measurementId: "G-EG2QGGQKR8"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    let allChats = [];
+    let showNewOnly = false;
+    function isToday(d) { return d ? new Date(d).toDateString() === new Date().toDateString() : false; }
+    function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function md2html(t) {
+      if (!t) return '';
+      var h = esc(t);
+      h = h.replace(/^##### (.*$)/gm, '<h5>$1</h5>');
+      h = h.replace(/^#### (.*$)/gm, '<h4>$1</h4>');
+      h = h.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+      h = h.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+      h = h.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+      h = h.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      h = h.replace(/`([^`]+)`/g, '<code>$1</code>');
+      h = h.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+      h = h.replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>');
+      h = h.replace(/^---$/gm, '<hr>');
+      h = h.replace(/\n\n/g, '</p><p>');
+      h = h.replace(/\n/g, '<br>');
+      return '<p>' + h + '</p>';
+    }
+    async function loadChats() {
+      document.getElementById('chatGrid').innerHTML = '<div class="loading" style="grid-column:1/-1"><div class="spinner"></div><p>Loading chats from Firebase...</p></div>';
+      try {
+        var snap = await db.collection('chats').orderBy('exportedAt', 'desc').get();
+        allChats = [];
+        snap.forEach(function(doc) { var d = doc.data(); d.id = doc.id; allChats.push(d); });
+        document.getElementById('errorContainer').style.display = 'none';
+      } catch (err) {
+        document.getElementById('errorContainer').style.display = 'block';
+        document.getElementById('errorContainer').textContent = 'Error: ' + (err.message || 'Check Firestore rules.');
+        allChats = [];
+      }
+      var total = allChats.length;
+      var msgs = allChats.reduce(function(s, c) { return s + (c.messageCount || 0); }, 0);
+      var newC = allChats.filter(function(c) { return isToday(c.exportedAt); }).length;
+      document.getElementById('totalChats').textContent = total;
+      document.getElementById('totalMessages').textContent = msgs;
+      document.getElementById('newToday').textContent = newC;
+      document.getElementById('subtitle').textContent = total + ' chat' + (total !== 1 ? 's' : '') + ' stored';
+      render();
+    }
+    function render() {
+      var q = document.getElementById('search').value.toLowerCase();
+      var grid = document.getElementById('chatGrid');
+      var filtered = allChats.filter(function(c) {
+        var s = (c.title||'') + ' ' + (c.author||'') + ' ' + (c.id||'');
+        if (q && s.toLowerCase().indexOf(q) === -1) return false;
+        if (showNewOnly && !isToday(c.exportedAt)) return false;
+        return true;
+      });
+      if (!filtered.length) {
+        grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><h2>' + (allChats.length === 0 ? 'No chats yet' : 'No results') + '</h2><p>Chats appear once the daily export runs.</p></div>';
+        return;
+      }
+      grid.innerHTML = filtered.map(function(c) {
+        return '<div class="chat-card" onclick="openChat(\'' + c.id + '\')">' +
+          '<div class="title">' + esc(c.title || 'Untitled') + '</div>' +
+          '<div class="meta">' +
+            (c.author ? '<span> ' + esc(c.author) + '</span>' : '') +
+            (c.created ? '<span> ' + c.created + '</span>' : '') +
+            '<span> ' + (c.messageCount || '?') + ' msgs</span>' +
+          '</div>' +
+          '<div class="badge-row">' +
+            '<span class="badge">' + (c.id || '').substring(0,8) + '...</span>' +
+            (isToday(c.exportedAt) ? '<span class="badge today">New Today</span>' : '') +
+          '</div></div>';
+      }).join('');
+    }
+    function toggleNewFilter() {
+      showNewOnly = !showNewOnly;
+      document.getElementById('filterNew').classList.toggle('active', showNewOnly);
+      render();
+    }
+    function openChat(id) {
+      var c = allChats.find(function(x) { return x.id === id; });
+      if (!c) return;
+      document.getElementById('modalTitle').textContent = c.title || 'Untitled';
+      document.getElementById('modalMeta').innerHTML =
+        (c.author ? '<span> ' + esc(c.author) + '</span>' : '') +
+        (c.created ? '<span> ' + c.created + '</span>' : '') +
+        '<span> ' + (c.messageCount || '?') + ' messages</span>' +
+        (c.sourceUrl ? '<a href="' + c.sourceUrl + '" target="_blank"> View Original</a>' : '') +
+        '<span><code style="font-size:11px;background:var(--surface2);padding:1px 6px;border-radius:4px">' + c.id + '</code></span>' +
+        '<button class="copy-btn" onclick="copyMd()"> Copy</button>';
+      document.getElementById('modalBody').innerHTML = md2html(c.markdown);
+      window._md = c.markdown;
+      document.getElementById('modal').classList.add('open');
+    }
+    function closeModal() { document.getElementById('modal').classList.remove('open'); }
+    function copyMd() {
+      navigator.clipboard.writeText(window._md || '').then(function() {
+        var btn = document.querySelector('.copy-btn');
+        btn.textContent = ' Copied!';
+        setTimeout(function() { btn.textContent = ' Copy'; }, 2000);
+      });
+    }
+    document.getElementById('modal').addEventListener('click', function(e) { if (e.target === e.currentTarget) closeModal(); });
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+    loadChats();
+  </script>
+</body>
+</html>
