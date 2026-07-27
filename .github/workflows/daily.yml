@@ -2,9 +2,8 @@ name: Daily Claude Share Export
 
 on:
   schedule:
-    # Runs every day at 08:00 UTC (1:30 PM IST)
     - cron: '0 8 * * *'
-  workflow_dispatch:  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
   export:
@@ -31,10 +30,22 @@ jobs:
           python discover_links.py --max 50
 
       - name: Run export + upload to Firebase
+        id: export
         env:
           FIREBASE_SERVICE_ACCOUNT_KEY: /tmp/firebase-key.json
         run: |
-          python claude_sharedchats.py links.txt --firebase-upload chats -o exports || echo "Export completed with some failures"
+          python claude_sharedchats.py links.txt --firebase-upload chats -o exports
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Report export result
+        if: always()
+        run: |
+          echo "Export exit code: ${{ steps.export.outputs.exit_code || 'unknown' }}"
+          if [ "${{ steps.export.outputs.exit_code }}" != "0" ]; then
+            echo "⚠️ Export completed with errors (some links may have failed)"
+          else
+            echo "✅ Export completed successfully"
+          fi
 
       - name: Commit updated links & manifest
         run: |
