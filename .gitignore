@@ -9,8 +9,9 @@ __pycache__/
 venv/
 .venv/
 
-# Exports
-exports/
+# Ignore large transcript files but keep manifest
+exports/*.md
+exports/**/*.md
 
 # OS files
 .DS_Store
